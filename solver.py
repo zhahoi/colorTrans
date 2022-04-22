@@ -144,7 +144,7 @@ class Solver():
                             black_imgs = black_imgs.type(torch.cuda.FloatTensor)
                             generated_imgs= self.colornet(black_imgs)
                     
-                    sample_imgs = generated_imgs[:25]
+                    sample_imgs = generated_imgs[:16]
 
                     img_name = 'generated_colorimg_{epoch}_{iters}.jpg'.format(epoch=epoch, iters=(iters % len(self.test_loader)))
                     img_path = os.path.join(self.result_dir, img_name)
@@ -157,7 +157,7 @@ class Solver():
                         os.makedirs(self.weight_dir)  
 
             # Save weight at the end of every epoch
-            if (epoch + 1) % 5 == 0:
+            if (epoch % 5) == 0:
                 # self.save_weight(epoch=epoch)
                 checkpoint = {
                     "colornet_state_dict": self.colornet.state_dict(),
