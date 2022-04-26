@@ -153,7 +153,7 @@ class Solver():
                     save_image(img_grid, img_path, nrow=4, normalize=True, scale_each=True)  
 
             # Save weight at the end of every epoch
-            if (epoch % 20) == 0:
+            if (epoch % 10) == 0:
                 # self.save_weight(epoch=epoch)
                 checkpoint = {
                     "colornet_state_dict": self.colornet.state_dict(),
@@ -164,4 +164,5 @@ class Solver():
                 self.save_checkpoint(checkpoint, path_checkpoint)  
 
         # write log to disk
-        self.writer.close()                      
+        self.writer.close()    
+        print("Training finished!")                
