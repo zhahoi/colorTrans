@@ -116,7 +116,7 @@ class Solver():
                 # calculate loss
                 loss = self.smoothl1_loss(gen_img_rgb, img_rgb)
                 # save loss to tensorboardX
-                self.writer.add_scalars('Loss', loss, epoch)
+                self.writer.add_scalar("Loss/train", loss, epoch)
 
                 # back propagation
                 self.optimizer.zero_grad()
