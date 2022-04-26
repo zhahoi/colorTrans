@@ -35,7 +35,7 @@ class Solver():
         self.train_loader, _ = data_loader(root=root, batch_size=batch_size, shuffle=True, 
                                                 img_size=img_size, mode='train')
 
-        self.test_loader, _ = data_loader(root=root, batch_size=test_batch_size, shuffle=False, 
+        self.test_loader, _ = data_loader(root=root, batch_size=test_batch_size, shuffle=Train, 
                                                 img_size=img_size, mode='train')
 
         # optimizer

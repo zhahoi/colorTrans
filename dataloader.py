@@ -37,7 +37,6 @@ class BlackWhite2Color(Dataset):
 def data_loader(root, batch_size=1, shuffle=True, img_size=224, mode='train'):    
     transform = transforms.Compose([
                                     transforms.Resize((img_size, img_size)),
-                                    transforms.RandomHorizontalFlip(p=0.5),
                                     transforms.ToTensor(),
                                     transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                                          std=(0.5, 0.5, 0.5))
