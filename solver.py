@@ -30,7 +30,7 @@ class Solver():
         self.colornet.to(self.device)
 
         # loss
-        self.L1_loss = nn.L1Loss().to(self.device)
+        self.smoothl1_loss = nn.SmoothL1Loss().to(self.device)
 
         # load training dataset
         self.train_loader, _ = data_loader(root=root, batch_size=batch_size, shuffle=True, 
@@ -50,6 +50,7 @@ class Solver():
         self.load_weight = load_weight
         self.num_epochs = num_epochs
         self.epochs = epochs
+        self.lr = lr
         self.img_size = img_size
         self.start_epoch = 0
         self.save_every = save_every
@@ -98,18 +99,16 @@ class Solver():
             # train color model
             self.colornet.train()
 
-            print('==> Training start: ')
+            for iters, (img_gray, img_rgb) in tqdm(enumerate(self.train_loader)):
+                # load gray images and ab images
+                img_gray = img_gray.type(torch.cuda.FloatTensor)
+                img_rgb = img_rgb.type(torch.cuda.FloatTensor)
 
-            for iters, (black_imgs, color_imgs) in tqdm(enumerate(self.train_loader)):
-                # load color images
-                black_imgs = black_imgs.type(torch.cuda.FloatTensor)
-                color_imgs = color_imgs.type(torch.cuda.FloatTensor)
-
-                # generate fake color images
-                recolor_imgs = self.colornet(black_imgs)
+                # generate fake ab images
+                gen_img_rgb = self.colornet(img_gray)
 
                 # calculate loss
-                loss = self.L1_loss(recolor_imgs, color_imgs)
+                loss = self.smoothl1_loss(gen_img_rgb, img_rgb)
 
                 # back propagation
                 self.optimizer.zero_grad()
@@ -138,20 +137,19 @@ class Solver():
 
                     # Generate fake image
                     self.colornet.eval()
-
                     with torch.no_grad():
-                        for iters, (black_imgs, _) in enumerate(self.test_loader):
-                            black_imgs = black_imgs.type(torch.cuda.FloatTensor)
-                            generated_imgs= self.colornet(black_imgs)
-                    
-                    sample_imgs = generated_imgs[:16]
+                        for iters, (img_gray, _) in enumerate(self.test_loader):
+                            img_gray = img_gray.type(torch.cuda.FloatTensor)
+                            gen_img_rgb = self.colornet(img_gray)
+                            
+                    sample_imgs = gen_img_rgb[:16]
 
                     img_name = 'generated_colorimg_{epoch}_{iters}.jpg'.format(epoch=epoch, iters=(iters % len(self.test_loader)))
                     img_path = os.path.join(self.result_dir, img_name)
 
                     img_grid = make_grid(sample_imgs, nrow=4, normalize=True, scale_each=True)
                     save_image(img_grid, img_path, nrow=4, normalize=True, scale_each=True)  
-
+  
                     # Save intermediate weight
                     if os.path.exists(self.weight_dir) is False:
                         os.makedirs(self.weight_dir)  

@@ -6,6 +6,7 @@ from torchvision.utils import make_grid, save_image
 from models import ColorTrans
 from dataloader import data_loader
 
+
 def main(args):    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,10 +24,10 @@ def main(args):
     colornet.load_state_dict(checkpoint['colornet_state_dict'])
     colornet.eval()
 
-    for _, (black_imgs, _) in enumerate(test_loader):
-        black_imgs = black_imgs.type(torch.cuda.FloatTensor)
+    for _, (img_gray, _) in enumerate(test_loader):
+        img_gray = img_gray.type(torch.cuda.FloatTensor)
         # generate color image 
-        generated_imgs= colornet(black_imgs)
+        gen_img_rgb = colornet(img_gray)
     
     if os.path.exists(args.result_dir) is False:
         os.makedirs(args.result_dir)
@@ -37,7 +38,7 @@ def main(args):
     img_name = 'generated_colorimg_{epoch}.png'.format(epoch=args.epochs)
     img_path = os.path.join(args.result_dir, img_name)
 
-    img_grid = make_grid(generated_imgs, nrow=5, normalize=True, scale_each=True)
+    img_grid = make_grid(gen_img_rgb, nrow=5, normalize=True, scale_each=True)
     save_image(img_grid, img_path, nrow=5, normalize=True, scale_each=True)  
 
 if __name__ == '__main__':

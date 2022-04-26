@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-import torchvision.transforms as Transforms
+from torchvision import transforms
 
 import os
 from PIL import Image
@@ -20,26 +20,27 @@ class BlackWhite2Color(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, self.mode, self.file_list[idx])
         img = Image.open(img_path)
-        W, H = img.size[0], img.size[1]
+        # W, H = img.size[0], img.size[1]
+
+        img_gray = img.convert('L') # 1 dimension
+        img_gray = [img_gray, img_gray, img_gray]
+        img_gray = Image.merge("RGB", img_gray)   # 3 dimension
+
+        img_rgb = img.convert('RGB')
         
-        data_l = img.convert('L') # 1 dimension
-        data = [data_l, data_l, data_l]
-        data = Image.merge("RGB", data)   # 3 dimension
-        ground_truth = img.convert('RGB')
+        img_gray = self.transform(img_gray)
+        img_rgb = self.transform(img_rgb)
         
-        data = self.transform(data)
-        ground_truth = self.transform(ground_truth)
-        
-        return (data, ground_truth)
+        return (img_gray, img_rgb)
 
 
 def data_loader(root, batch_size=1, shuffle=True, img_size=224, mode='train'):    
-    transform = Transforms.Compose([Transforms.Resize((img_size, img_size)),
-                                    Transforms.ToTensor(),
-                                    Transforms.Normalize(mean=(0.5, 0.5, 0.5),
+    transform = transforms.Compose([
+                                    transforms.Resize((img_size, img_size)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                                          std=(0.5, 0.5, 0.5))
                                    ])
-    
     dset = BlackWhite2Color(root, transform, mode=mode)
     
     if batch_size == 'all':

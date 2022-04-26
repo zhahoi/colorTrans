@@ -1,15 +1,13 @@
 import torch
 import torch.nn as nn
-import numpy as np
-from torch.nn import functional as F
 
 from einops import rearrange
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+from timm.models.layers import to_2tuple, trunc_normal_
 
 
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
-        super().__init__()
+        super(Mlp, self).__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
         self.fc1 = nn.Linear(in_features, hidden_features)
@@ -25,6 +23,7 @@ class Mlp(nn.Module):
         x = self.drop(x)
 
         return x
+
 
 
 def window_partition(x, window_size):
@@ -61,6 +60,7 @@ def window_reverse(windows, window_size, H, W):
     return x
 
 
+
 class WindowAttention(nn.Module):
     r""" Window based multi-head self attention (W-MSA) module with relative position bias.
     It supports both of shifted and non-shifted window.
@@ -75,8 +75,7 @@ class WindowAttention(nn.Module):
     """
 
     def __init__(self, dim, window_size, num_heads, qk_scale=None, attn_drop=0.):
-
-        super().__init__()
+        super(WindowAttention, self).__init__()
         self.dim = dim
         self.window_size = window_size  # Wh, Ww
         self.num_heads = num_heads
@@ -139,6 +138,7 @@ class WindowAttention(nn.Module):
         return x
 
 
+
 class SwinTransformerBlock(nn.Module):
     r""" Swin Transformer Block.
     Args:
@@ -160,7 +160,7 @@ class SwinTransformerBlock(nn.Module):
     def __init__(self, dim, input_resolution, num_heads, window_size=7, 
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., 
                  act_layer=nn.GELU, norm_layer=nn.LayerNorm):
-        super().__init__()
+        super(SwinTransformerBlock, self).__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.num_heads = num_heads
@@ -268,6 +268,7 @@ class SwinTransformerBlock(nn.Module):
         return q_windows, k_windows, v_windows
 
 
+
 class PatchEmbed(nn.Module):
     r""" Image to Patch Embedding
     Args:
@@ -279,7 +280,7 @@ class PatchEmbed(nn.Module):
     """
 
     def __init__(self, img_size=224, patch_size=4, in_chans=96, embed_dim=96, norm_layer=nn.LayerNorm):
-        super().__init__()
+        super(PatchEmbed, self).__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         patches_resolution = [img_size[0] // patch_size[0], img_size[1] // patch_size[1]]
@@ -309,6 +310,7 @@ class PatchEmbed(nn.Module):
         return x
 
 
+
 # downsampling
 class PatchMerging(nn.Module):
     r""" Patch Merging Layer.
@@ -319,7 +321,7 @@ class PatchMerging(nn.Module):
     """
 
     def __init__(self, input_resolution, dim, norm_layer=nn.LayerNorm):
-        super().__init__()
+        super(PatchMerging, self).__init__()
         self.input_resolution = input_resolution
         self.dim = dim
         self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
@@ -349,263 +351,61 @@ class PatchMerging(nn.Module):
         return x
 
 
-class SinusoidalPositionalEmbedding(nn.Module):
-    """Sinusoidal Positional Embedding 1D or 2D (SPE/SPE2d).
-    This module is a modified from:
-    https://github.com/pytorch/fairseq/blob/master/fairseq/modules/sinusoidal_positional_embedding.py # noqa
-    Based on the original SPE in single dimension, we implement a 2D sinusoidal
-    positional encodding (SPE2d), as introduced in Positional Encoding as
-    Spatial Inductive Bias in GANs, CVPR'2021.
-    Args:
-        embedding_dim (int): The number of dimensions for the positional
-            encoding.
-        padding_idx (int | list[int]): The index for the padding contents. The
-            padding positions will obtain an encoding vector filling in zeros.
-        init_size (int, optional): The initial size of the positional buffer.
-            Defaults to 1024.
-        div_half_dim (bool, optional): If true, the embedding will be divided
-            by :math:`d/2`. Otherwise, it will be divided by
-            :math:`(d/2 -1)`. Defaults to False.
-        center_shift (int | None, optional): Shift the center point to some
-            index. Defaults to None.
-    """
-
-    def __init__(self,
-                 embedding_dim,
-                 padding_idx,
-                 init_size=1024,
-                 div_half_dim=False,
-                 center_shift=None):
-        super().__init__()
-        self.embedding_dim = embedding_dim
-        self.padding_idx = padding_idx
-        self.div_half_dim = div_half_dim
-        self.center_shift = center_shift
-
-        self.weights = SinusoidalPositionalEmbedding.get_embedding(
-            init_size, embedding_dim, padding_idx, self.div_half_dim)
-
-        self.register_buffer('_float_tensor', torch.FloatTensor(1))
-
-        self.max_positions = int(1e5)
-
-    @staticmethod
-    def get_embedding(num_embeddings,
-                      embedding_dim,
-                      padding_idx=None,
-                      div_half_dim=False):
-        """Build sinusoidal embeddings.
-        This matches the implementation in tensor2tensor, but differs slightly
-        from the description in Section 3.5 of "Attention Is All You Need".
-        """
-        assert embedding_dim % 2 == 0, (
-            'In this version, we request '
-            f'embedding_dim divisible by 2 but got {embedding_dim}')
-
-        # there is a little difference from the original paper.
-        half_dim = embedding_dim // 2
-        if not div_half_dim:
-            emb = np.log(10000) / (half_dim - 1)
-        else:
-            emb = np.log(1e4) / half_dim
-        # compute exp(-log10000 / d * i)
-        emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)
-        emb = torch.arange(
-            num_embeddings, dtype=torch.float).unsqueeze(1) * emb.unsqueeze(0)
-        emb = torch.cat([torch.sin(emb), torch.cos(emb)],
-                        dim=1).view(num_embeddings, -1)
-        if padding_idx is not None:
-            emb[padding_idx, :] = 0
-
-        return emb
-
-    def forward(self, input, **kwargs):
-        """Input is expected to be of size [bsz x seqlen].
-        Returned tensor is expected to be of size  [bsz x seq_len x emb_dim]
-        """
-        assert input.dim() == 2 or input.dim(
-        ) == 4, 'Input dimension should be 2 (1D) or 4(2D)'
-
-        if input.dim() == 4:
-            return self.make_grid2d_like(input, **kwargs)
-
-        b, seq_len = input.shape
-        max_pos = self.padding_idx + 1 + seq_len
-
-        if self.weights is None or max_pos > self.weights.size(0):
-            # recompute/expand embedding if needed
-            self.weights = SinusoidalPositionalEmbedding.get_embedding(
-                max_pos, self.embedding_dim, self.padding_idx)
-        self.weights = self.weights.to(self._float_tensor)
-
-        positions = self.make_positions(input, self.padding_idx).to(
-            self._float_tensor.device)
-
-        return self.weights.index_select(0, positions.view(-1)).view(
-            b, seq_len, self.embedding_dim).detach()
-
-    def make_positions(self, input, padding_idx):
-        mask = input.ne(padding_idx).int()
-        return (torch.cumsum(mask, dim=1).type_as(mask) *
-                mask).long() + padding_idx
-
-    def make_grid2d(self, height, width, num_batches=1, center_shift=None):
-        h, w = height, width
-        # if `center_shift` is not given from the outside, use
-        # `self.center_shift`
-        if center_shift is None:
-            center_shift = self.center_shift
-
-        h_shift = 0
-        w_shift = 0
-        # center shift to the input grid
-        if center_shift is not None:
-            # if h/w is even, the left center should be aligned with
-            # center shift
-            if h % 2 == 0:
-                h_left_center = h // 2
-                h_shift = center_shift - h_left_center
-            else:
-                h_center = h // 2 + 1
-                h_shift = center_shift - h_center
-
-            if w % 2 == 0:
-                w_left_center = w // 2
-                w_shift = center_shift - w_left_center
-            else:
-                w_center = w // 2 + 1
-                w_shift = center_shift - w_center
-
-        # Note that the index is started from 1 since zero will be padding idx.
-        # axis -- (b, h or w)
-        x_axis = torch.arange(1, w + 1).unsqueeze(0).repeat(num_batches,
-                                                            1) + w_shift
-        y_axis = torch.arange(1, h + 1).unsqueeze(0).repeat(num_batches,
-                                                            1) + h_shift
-
-        # emb -- (b, emb_dim, h or w)
-        x_emb = self(x_axis).transpose(1, 2)
-        y_emb = self(y_axis).transpose(1, 2)
-
-        # make grid for x/y axis
-        # Note that repeat will copy data. If use learned emb, expand may be
-        # better.
-        x_grid = x_emb.unsqueeze(2).repeat(1, 1, h, 1)
-        y_grid = y_emb.unsqueeze(3).repeat(1, 1, 1, w)
-
-        # cat grid -- (b, 2 x emb_dim, h, w)
-        grid = torch.cat([x_grid, y_grid], dim=1)
-        return grid.detach()
-
-    def make_grid2d_like(self, x, center_shift=None):
-        """Input tensor with shape of (b, ..., h, w) Return tensor with shape
-        of (b, 2 x emb_dim, h, w)
-        Note that the positional embedding highly depends on the the function,
-        ``make_positions``.
-        """
-        h, w = x.shape[-2:]
-        grid = self.make_grid2d(h, w, x.size(0), center_shift)
-
-        return grid.to(x)
-
 
 # upsampling
-class BilinearUpsample(nn.Module):
-    """ BilinearUpsample Layer.
-    Args:
-        input_resolution (tuple[int]): Resolution of input feature.
-        dim (int): Number of input channels.
-        out_dim (int): Number of output channels.
-    """
-
-    def __init__(self, input_resolution, scale_factor=2, dim=None, out_dim=None):
-        super().__init__()
-        self.scale_factor = scale_factor
-        assert dim % 2 == 0, f"x dim are not even."
-        self.upsample = nn.Upsample(scale_factor=self.scale_factor, mode='bilinear', align_corners=False)
-        self.norm = nn.LayerNorm(dim)
-        self.reduction = nn.Linear(dim, out_dim, bias=False)
+class PatchExpand(nn.Module):
+    def __init__(self, input_resolution, dim, dim_scale=2, norm_layer=nn.LayerNorm):
+        super(PatchExpand, self).__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.out_dim = out_dim
-        self.alpha = nn.Parameter(torch.zeros(1))
-        self.sin_pos_embed = SinusoidalPositionalEmbedding(embedding_dim=(out_dim // 2), padding_idx=0, init_size=(out_dim // 2))
+        self.expand = nn.Linear(dim, 2 * dim, bias=False) if dim_scale==2 else nn.Identity()
+        self.norm = norm_layer(dim // dim_scale)
 
     def forward(self, x):
         """
         x: B, H*W, C
         """
         H, W = self.input_resolution
+        x = self.expand(x)
         B, L, C = x.shape
         assert L == H * W, "input feature has wrong size"
-        assert C == self.dim, "wrong in PatchMerging"
 
-        x = x.view(B, H, W, -1)
-        # B, C, H, W
-        x = x.permute(0, 3, 1, 2).contiguous() 
-        # B, C, H * 2, W * 2
-        x = self.upsample(x)
-        # B, C, H * 2, W * 2 -> B, H * W * 4, C
-        x = x.permute(0, 2, 3, 1).contiguous().view(B, L*4, C) 
-        x = self.norm(x)
-        # B, H * W * 4, C -> B, L * 4, C // 2
-        x = self.reduction(x)
-
-        # Add SPE    
-        x = x.reshape(B, H * 2, W * 2, self.out_dim).permute(0, 3, 1, 2)
-        x += self.sin_pos_embed.make_grid2d(H * 2, W * 2, B) * self.alpha
-        x = x.permute(0, 2, 3, 1).contiguous().view(B, H * 2 * W * 2, self.out_dim)
+        x = x.view(B, H, W, C)
+        x = rearrange(x, 'b h w (p1 p2 c)-> b (h p1) (w p2) c', p1=2, p2=2, c=(C // 4))
+        x = x.view(B, -1, C // 4)
+        x= self.norm(x)
 
         return x
 
 
-class BilinearUpsample4x(nn.Module):
-    """ BilinearUpsample Layer.
-    Args:
-        input_resolution (tuple[int]): Resolution of input feature.
-        dim (int): Number of input channels.
-        out_dim (int): Number of output channels.
-    """
 
-    def __init__(self, input_resolution, scale_factor=4, dim=None, out_dim=None):
-        super().__init__()
-        self.scale_factor = scale_factor
-        assert dim % 2 == 0, f"x dim are not even."
-        self.upsample = nn.Upsample(scale_factor=self.scale_factor, mode='bilinear', align_corners=False)
-        self.norm = nn.LayerNorm(dim)
-        self.reduction = nn.Linear(dim, out_dim, bias=False)
+# upsampling x4
+class PatchExpand_X4(nn.Module):
+    def __init__(self, input_resolution, dim, dim_scale=4, norm_layer=nn.LayerNorm):
+        super(PatchExpand_X4, self).__init__()
         self.input_resolution = input_resolution
         self.dim = dim
-        self.out_dim = out_dim
-        self.alpha = nn.Parameter(torch.zeros(1))
-        self.sin_pos_embed = SinusoidalPositionalEmbedding(embedding_dim=(out_dim // 2), padding_idx=0, init_size=(out_dim // 2))
+        self.dim_scale = dim_scale
+        self.expand = nn.Linear(dim, 16 * dim, bias=False)
+        self.output_dim = dim 
+        self.norm = norm_layer(self.output_dim)
 
     def forward(self, x):
         """
         x: B, H*W, C
         """
         H, W = self.input_resolution
+        x = self.expand(x)
         B, L, C = x.shape
         assert L == H * W, "input feature has wrong size"
-        assert C == self.dim, "wrong in PatchMerging"
 
-        x = x.view(B, H, W, -1)
-        # B, C, H, W
-        x = x.permute(0, 3, 1, 2).contiguous() 
-        # B, C, H * 4, W * 4
-        x = self.upsample(x)
-        # B, C, H * 4, W * 4 -> B, H * W * 16, C
-        x = x.permute(0, 2, 3, 1).contiguous().view(B, L*16, C) 
-        x = self.norm(x)
-        # B, H * W * 16, C -> B, L * 16, C 
-        x = self.reduction(x)
-
-        # Add SPE    
-        x = x.reshape(B, H * 4, W * 4, self.out_dim).permute(0, 3, 1, 2)
-        x += self.sin_pos_embed.make_grid2d(H * 4, W * 4, B) * self.alpha
-        x = x.permute(0, 2, 3, 1).contiguous().view(B, H * 4 * W * 4, self.out_dim)
+        x = x.view(B, H, W, C)
+        x = rearrange(x, 'b h w (p1 p2 c)-> b (h p1) (w p2) c', p1=self.dim_scale, p2=self.dim_scale, c=(C // (self.dim_scale**2)))
+        x = x.view(B,-1,self.output_dim)
+        x= self.norm(x)
 
         return x
+
 
 
 class TransformerBlock(nn.Module):
@@ -626,7 +426,7 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, dim, input_resolution, depth, num_heads=4, window_size=7, mlp_ratio=4., 
                  qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., norm_layer=nn.LayerNorm):
-        super().__init__()
+        super(TransformerBlock, self).__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
@@ -650,7 +450,7 @@ class TransformerBlock(nn.Module):
 
 
 class ColorTrans(nn.Module):
-    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=3, out_chans=3, patch_size=4, embed_dim=96, num_heads=[3, 6, 12, 24], mlp_ratio=4, window_size=7):
+    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=1, out_chans=2, patch_size=4, embed_dim=96, num_heads=[3, 6, 12, 24], mlp_ratio=4, window_size=7):
         super(ColorTrans, self).__init__()
         self.img_size = img_size
         self.patch_size = patch_size
@@ -702,7 +502,7 @@ class ColorTrans(nn.Module):
         )
 
         # up1 n, 7 * 7, 768 -> n, 14 * 14, 384
-        self.up1 = BilinearUpsample(input_resolution=[self.img_size // 32, self.img_size // 32], scale_factor=2, dim=(self.embed_dim * 8), out_dim=(self.embed_dim * 4))
+        self.up1 = PatchExpand(input_resolution=[self.img_size // 32, self.img_size // 32], dim=(self.embed_dim * 8))
         
         # n, 14 * 14, 384 -> n, 14 * 14, 384
         self.layer5 = TransformerBlock(
@@ -711,7 +511,7 @@ class ColorTrans(nn.Module):
         )
 
         # n, 14 * 14, 384 -> n, 28 * 28, 192
-        self.up2 = BilinearUpsample(input_resolution=[self.img_size // 16, self.img_size // 16], scale_factor=2, dim=(self.embed_dim * 4), out_dim=(self.embed_dim * 2))
+        self.up2 = PatchExpand(input_resolution=[self.img_size // 16, self.img_size // 16], dim=(self.embed_dim * 4))
         
         # n, 28 * 28, 192 -> n, 28 * 28, 192
         self.layer6 = TransformerBlock(
@@ -720,7 +520,7 @@ class ColorTrans(nn.Module):
         )
 
         # n, 28 * 28, 192 -> n, 56 * 56, 96
-        self.up3 = BilinearUpsample(input_resolution=[self.img_size // 8, self.img_size // 8], scale_factor=2, dim=(self.embed_dim * 2), out_dim=(self.embed_dim))
+        self.up3 = PatchExpand(input_resolution=[self.img_size // 8, self.img_size // 8], dim=(self.embed_dim * 2))
         
         # n, 56 * 56, 96 -> n, 56 * 56, 96
         self.layer7 = TransformerBlock(
@@ -729,7 +529,7 @@ class ColorTrans(nn.Module):
         )
 
         # n, 56 * 56, 96 -> n, 224 * 224, 96
-        self.up4 = BilinearUpsample4x(input_resolution=[self.img_size // 4, self.img_size // 4], scale_factor=4, dim=self.embed_dim, out_dim=self.embed_dim)
+        self.up4 = PatchExpand_X4(input_resolution=[self.img_size // 4, self.img_size // 4], dim=self.embed_dim)
 
         # n, 96, 224, 224 -> n, 3, 224, 224
         self.output = nn.Conv2d(self.embed_dim, self.out_chans, kernel_size=3, stride=1, padding=1, bias=False)
@@ -780,7 +580,8 @@ class ColorTrans(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.randn((2, 3, 224, 224))
+    x = torch.randn((2, 1, 224, 224))
     model = ColorTrans()
+    print(model)
     print((model(x)).shape)
 

@@ -1,9 +1,8 @@
 import torch
 import random
-
 import numpy as np
-import torch.backends.cudnn as cudnn
 
+import torch.backends.cudnn as cudnn
 
 # Source from "https://github.com/ultralytics/yolov5/blob/master/utils/torch_utils.py"
 def init_torch_seeds(seed: int = 0):
