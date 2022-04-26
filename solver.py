@@ -6,7 +6,6 @@ from torchvision.utils import make_grid, save_image
 import os
 import time
 import datetime
-import numpy as np
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 

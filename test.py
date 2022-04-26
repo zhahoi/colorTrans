@@ -6,7 +6,6 @@ from torchvision.utils import make_grid, save_image
 from models import ColorTrans
 from dataloader import data_loader
 
-
 def main(args):    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

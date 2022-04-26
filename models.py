@@ -25,7 +25,6 @@ class Mlp(nn.Module):
         return x
 
 
-
 def window_partition(x, window_size):
     """
     Args:
@@ -58,7 +57,6 @@ def window_reverse(windows, window_size, H, W):
     x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
 
     return x
-
 
 
 class WindowAttention(nn.Module):
@@ -136,7 +134,6 @@ class WindowAttention(nn.Module):
         x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
 
         return x
-
 
 
 class SwinTransformerBlock(nn.Module):
@@ -268,7 +265,6 @@ class SwinTransformerBlock(nn.Module):
         return q_windows, k_windows, v_windows
 
 
-
 class PatchEmbed(nn.Module):
     r""" Image to Patch Embedding
     Args:
@@ -308,7 +304,6 @@ class PatchEmbed(nn.Module):
             x = self.norm(x)
 
         return x
-
 
 
 # downsampling
@@ -351,7 +346,6 @@ class PatchMerging(nn.Module):
         return x
 
 
-
 # upsampling
 class PatchExpand(nn.Module):
     def __init__(self, input_resolution, dim, dim_scale=2, norm_layer=nn.LayerNorm):
@@ -376,7 +370,6 @@ class PatchExpand(nn.Module):
         x= self.norm(x)
 
         return x
-
 
 
 # upsampling x4
@@ -405,7 +398,6 @@ class PatchExpand_X4(nn.Module):
         x= self.norm(x)
 
         return x
-
 
 
 class TransformerBlock(nn.Module):
@@ -446,7 +438,6 @@ class TransformerBlock(nn.Module):
             x = block(x)
 
         return x
-
 
 
 class ColorTrans(nn.Module):
@@ -555,7 +546,6 @@ class ColorTrans(nn.Module):
             nn.init.xavier_normal_(m.weight, gain=.02)
             if hasattr(m, 'bias') and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-
 
     def forward(self, x):
         input = self.input(x)

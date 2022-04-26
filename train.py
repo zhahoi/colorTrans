@@ -15,8 +15,7 @@ def main(args):
                     num_epochs = args.num_epochs,
                     save_every = args.save_every,
                     load_weight = args.load_weight,
-                    )
-                    
+                    )  
     solver.train()
 
 if __name__ == '__main__':
@@ -37,6 +36,5 @@ if __name__ == '__main__':
                         
     args = parser.parse_args([])
     main(args=args)
-
 
 
