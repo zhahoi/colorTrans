@@ -40,6 +40,7 @@ def main(args):
     img_grid = make_grid(gen_img_rgb, nrow=5, normalize=True, scale_each=True)
     save_image(img_grid, img_path, nrow=5, normalize=True, scale_each=True)  
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=str, default='../input/ncdataset', 

@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_dir', type=str, default='weight', help='Weight location')
     parser.add_argument('--batch_size', type=int, default=8, help='Training batch size')
     parser.add_argument('--test_batch_size', type=int, default=16, help='Batch size for generator.')
-    parser.add_argument('--lr', type=float, default=0.0002, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
     parser.add_argument('--beta_1', type=float, default=0.9, help='Beta1 for Adam')
     parser.add_argument('--beta_2', type=float, default=0.999, help='Beta2 for Adam')
     parser.add_argument('--save_every', type=int, default=100, help='How often do you want to see the result?')

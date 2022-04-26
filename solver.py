@@ -53,6 +53,13 @@ class Solver():
         self.img_size = img_size
         self.start_epoch = 0
         self.save_every = save_every
+
+        # create dir
+        if os.path.exists(self.result_dir) is False:
+            os.makedirs(self.result_dir)
+
+        if os.path.exists(self.weight_dir) is False:
+            os.makedirs(self.weight_dir) 
         
     '''
     <show_model >
@@ -90,10 +97,10 @@ class Solver():
             checkpoint = torch.load(os.path.join(self.weight_dir, weight_name))
             self.load_checkpoint(checkpoint)
         
-        self.show_model()
+        # self.show_model()
 
         print('====================     Training    Start... =====================')
-        for epoch in range(self.start_epoch, self.num_epochs):
+        for epoch in range(self.start_epoch, self.num_epochs + 1):
             start_time = time.time()
             # train color model
             self.colornet.train()
@@ -108,6 +115,8 @@ class Solver():
 
                 # calculate loss
                 loss = self.smoothl1_loss(gen_img_rgb, img_rgb)
+                # save loss to tensorboardX
+                self.writer.add_scalars('Loss', loss, epoch)
 
                 # back propagation
                 self.optimizer.zero_grad()
@@ -119,20 +128,14 @@ class Solver():
                 for param_group in self.optimizer.param_groups:
                     param_group['lr'] = lr_
 
-                self.writer.add_scalars('losses', {'loss': loss}, iters)
-
                 log_file = open('log.txt', 'w')
                 log_file.write(str(epoch))
 
                 # Print error, save intermediate result image and weight
-                if epoch and iters % self.save_every == 0:
+                if epoch and (iters % self.save_every) == 0:
                     et = time.time() - start_time
                     et = str(datetime.timedelta(seconds=et))[:-7]
                     print('[Elapsed : %s /Epoch : %d / Iters : %d] => loss : %f ' %(et, epoch, iters, loss.item()))
-
-                    # Save intermediate result image
-                    if os.path.exists(self.result_dir) is False:
-                        os.makedirs(self.result_dir)
 
                     # Generate fake image
                     self.colornet.eval()
@@ -148,13 +151,9 @@ class Solver():
 
                     img_grid = make_grid(sample_imgs, nrow=4, normalize=True, scale_each=True)
                     save_image(img_grid, img_path, nrow=4, normalize=True, scale_each=True)  
-  
-                    # Save intermediate weight
-                    if os.path.exists(self.weight_dir) is False:
-                        os.makedirs(self.weight_dir)  
 
             # Save weight at the end of every epoch
-            if (epoch % 5) == 0:
+            if (epoch % 20) == 0:
                 # self.save_weight(epoch=epoch)
                 checkpoint = {
                     "colornet_state_dict": self.colornet.state_dict(),
@@ -162,4 +161,7 @@ class Solver():
                     "epoch": epoch
                     }
                 path_checkpoint = os.path.join(self.weight_dir, "checkpoint_{}_epoch.pkl".format(epoch))
-                self.save_checkpoint(checkpoint, path_checkpoint)                        
+                self.save_checkpoint(checkpoint, path_checkpoint)  
+
+        # write log to disk
+        self.writer.close()                      
