@@ -35,7 +35,7 @@ class Solver():
         self.train_loader, _ = data_loader(root=root, batch_size=batch_size, shuffle=True, 
                                                 img_size=img_size, mode='train')
 
-        self.test_loader, _ = data_loader(root=root, batch_size=test_batch_size, shuffle=Train, 
+        self.test_loader, _ = data_loader(root=root, batch_size=test_batch_size, shuffle=True, 
                                                 img_size=img_size, mode='train')
 
         # optimizer
@@ -137,20 +137,21 @@ class Solver():
                     et = str(datetime.timedelta(seconds=et))[:-7]
                     print('[Elapsed : %s /Epoch : %d / Iters : %d] => loss : %f ' %(et, epoch, iters, loss.item()))
 
-                    # Generate fake image
-                    self.colornet.eval()
-                    with torch.no_grad():
-                        for iters, (img_gray, _) in enumerate(self.test_loader):
-                            img_gray = img_gray.type(torch.cuda.FloatTensor)
-                            gen_img_rgb = self.colornet(img_gray)
-                            
-                    sample_imgs = gen_img_rgb[:16]
+            if (epoch % 2) == 0:
+                # Generate fake image
+                self.colornet.eval()
+                with torch.no_grad():
+                    for iters, (img_gray, _) in enumerate(self.test_loader):
+                        img_gray = img_gray.type(torch.cuda.FloatTensor)
+                        gen_img_rgb = self.colornet(img_gray)
+                        
+                sample_imgs = gen_img_rgb[:16]
 
-                    img_name = 'generated_colorimg_{epoch}_{iters}.jpg'.format(epoch=epoch, iters=(iters % len(self.test_loader)))
-                    img_path = os.path.join(self.result_dir, img_name)
+                img_name = 'generated_colorimg_{epoch}_{iters}.jpg'.format(epoch=epoch, iters=(iters % len(self.test_loader)))
+                img_path = os.path.join(self.result_dir, img_name)
 
-                    img_grid = make_grid(sample_imgs, nrow=4, normalize=True, scale_each=True)
-                    save_image(img_grid, img_path, nrow=4, normalize=True, scale_each=True)  
+                img_grid = make_grid(sample_imgs, nrow=4, normalize=True, scale_each=True)
+                save_image(img_grid, img_path, nrow=4, normalize=True, scale_each=True)  
 
             # Save weight at the end of every epoch
             if (epoch % 10) == 0:

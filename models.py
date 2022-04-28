@@ -6,7 +6,7 @@ from timm.models.layers import to_2tuple, trunc_normal_
 
 
 class Mlp(nn.Module):
-    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.1):
         super(Mlp, self).__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -72,7 +72,7 @@ class WindowAttention(nn.Module):
         proj_drop (float, optional): Dropout ratio of output. Default: 0.0
     """
 
-    def __init__(self, dim, window_size, num_heads, qk_scale=None, attn_drop=0.):
+    def __init__(self, dim, window_size, num_heads, qk_scale=None, attn_drop=0.1):
         super(WindowAttention, self).__init__()
         self.dim = dim
         self.window_size = window_size  # Wh, Ww
@@ -155,7 +155,7 @@ class SwinTransformerBlock(nn.Module):
     """
 
     def __init__(self, dim, input_resolution, num_heads, window_size=7, 
-                 mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., 
+                 mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0.1, attn_drop=0.1, 
                  act_layer=nn.GELU, norm_layer=nn.LayerNorm):
         super(SwinTransformerBlock, self).__init__()
         self.dim = dim
@@ -417,7 +417,7 @@ class TransformerBlock(nn.Module):
     """
 
     def __init__(self, dim, input_resolution, depth, num_heads=4, window_size=7, mlp_ratio=4., 
-                 qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., norm_layer=nn.LayerNorm):
+                 qkv_bias=True, qk_scale=None, drop=0.1, attn_drop=0.1, norm_layer=nn.LayerNorm):
         super(TransformerBlock, self).__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -441,7 +441,7 @@ class TransformerBlock(nn.Module):
 
 
 class ColorTrans(nn.Module):
-    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=1, out_chans=2, patch_size=4, embed_dim=96, num_heads=[3, 6, 12, 24], mlp_ratio=4, window_size=7):
+    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=3, out_chans=3, patch_size=4, embed_dim=96, num_heads=[2, 4, 8, 16], mlp_ratio=4, window_size=7):
         super(ColorTrans, self).__init__()
         self.img_size = img_size
         self.patch_size = patch_size
