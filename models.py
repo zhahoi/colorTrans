@@ -1,10 +1,13 @@
+import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from einops import rearrange
 from timm.models.layers import to_2tuple, trunc_normal_
 
 
+"""Normal Feed-forward Networks"""
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.1):
         super(Mlp, self).__init__()
@@ -21,6 +24,78 @@ class Mlp(nn.Module):
         x = self.drop(x)
         x = self.fc2(x)
         x = self.drop(x)
+
+        return x
+
+
+"""Locally-enhanced Feed-Forward Network"""
+class LeFF(nn.Module):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.1):
+        super(LeFF, self).__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+        self.fc1 = nn.Sequential(
+            nn.Linear(in_features, hidden_features),
+            act_layer()
+        )
+        self.dwconv = nn.Sequential(
+            nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1, groups=hidden_features),
+            act_layer()
+        )
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        # B, H * W, C
+        _, N, _ = x.size()
+        H, W = int(math.sqrt(N)), int(math.sqrt(N))
+
+        x = self.fc1(x)
+        x = self.drop(x)
+
+         # spatial restore
+        x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
+        # B, C, H, W
+        x = self.dwconv(x)
+        # flaten
+        x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
+        x = self.drop(x)
+    
+        x = self.fc2(x)
+
+        return x
+
+
+## Gated-Dconv Feed-Forward Network (GDFN)
+class GDFF(nn.Module):
+    def __init__(self, in_features, hidden_features=None, out_features=None, drop=0.1):
+        super(GDFF, self).__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.dwconv = nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1, groups=hidden_features)
+        self.fc2 = nn.Linear(hidden_features // 2, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        # B, H * W, C
+        _, N, _ = x.size()
+        H, W = int(math.sqrt(N)), int(math.sqrt(N))
+
+        x = self.fc1(x)
+        x = self.drop(x)
+
+         # spatial restore
+        x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
+        # B, C, H, W
+        x1, x2 = self.dwconv(x).chunk(2, dim=1)
+        x = F.gelu(x1) * x2
+        # flaten
+        x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
+        x = self.drop(x)
+    
+        x = self.fc2(x)
 
         return x
 
@@ -213,7 +288,8 @@ class SwinTransformerBlock(nn.Module):
 
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+        # you can choose different FeedForward module
+        self.mlp = LeFF(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x):
         H, W = self.input_resolution
@@ -574,4 +650,6 @@ if __name__ == '__main__':
     model = ColorTrans()
     print(model)
     print((model(x)).shape)
+
+
 
