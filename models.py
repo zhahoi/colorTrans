@@ -49,11 +49,11 @@ class LeFF(nn.Module):
         x = self.fc1(x)
 
          # spatial restore
-        x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
+        x = rearrange(x, 'b (h w) (c) -> b c h w', h=H, w=W)
         # B, C, H, W
         x = self.dwconv(x)
         # flaten B, N, C
-        x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
+        x = rearrange(x, 'b c h w -> b (h w) c', h=H, w=W)
         x = self.act(x)
         x = self.drop(x)
         
@@ -86,12 +86,12 @@ class GDFF(nn.Module):
         x = self.fc1(x)
 
          # spatial restore
-        x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
+        x = rearrange(x, 'b (h w) (c) -> b c h w', h=H, w=W)
         # B, C, H, W
         x1, x2 = self.dwconv(x).chunk(2, dim=1)
         x = self.act(x1) * x2
         # flaten
-        x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
+        x = rearrange(x, 'b c h w -> b (h w) c', h=H, w=W)
         x = self.drop(x)
     
         x = self.fc2(x)
