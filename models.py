@@ -34,41 +34,40 @@ class LeFF(nn.Module):
         super(LeFF, self).__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        self.fc1 = nn.Sequential(
-            nn.Linear(in_features, hidden_features),
-            act_layer()
-        )
-        self.dwconv = nn.Sequential(
-            nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1, groups=hidden_features),
-            act_layer()
-        )
+
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.dwconv = nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1, groups=hidden_features),
         self.fc2 = nn.Linear(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
+        self.act = act_layer()
 
     def forward(self, x):
-        # B, H * W, C
+        # B, N = H * W, C
         _, N, _ = x.size()
         H, W = int(math.sqrt(N)), int(math.sqrt(N))
 
         x = self.fc1(x)
-        x = self.drop(x)
 
          # spatial restore
         x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
         # B, C, H, W
         x = self.dwconv(x)
-        # flaten
+        # flaten B, N, C
         x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
+        x = self.act(x)
         x = self.drop(x)
-    
+        
+        # B, N, C
         x = self.fc2(x)
+        x = self.drop(x)
 
         return x
 
 
+
 ## Gated-Dconv Feed-Forward Network (GDFN)
 class GDFF(nn.Module):
-    def __init__(self, in_features, hidden_features=None, out_features=None, drop=0.1):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.1):
         super(GDFF, self).__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -77,6 +76,7 @@ class GDFF(nn.Module):
         self.dwconv = nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1, groups=hidden_features)
         self.fc2 = nn.Linear(hidden_features // 2, out_features)
         self.drop = nn.Dropout(drop)
+        self.act = act_layer()
 
     def forward(self, x):
         # B, H * W, C
@@ -84,18 +84,18 @@ class GDFF(nn.Module):
         H, W = int(math.sqrt(N)), int(math.sqrt(N))
 
         x = self.fc1(x)
-        x = self.drop(x)
 
          # spatial restore
         x = rearrange(x, ' b (h w) (c) -> b c h w ', h=H, w=W)
         # B, C, H, W
         x1, x2 = self.dwconv(x).chunk(2, dim=1)
-        x = F.gelu(x1) * x2
+        x = self.act(x1) * x2
         # flaten
         x = rearrange(x, ' b c h w -> b (h w) c', h=H, w=W)
         x = self.drop(x)
     
         x = self.fc2(x)
+        x = self.drop(x)
 
         return x
 
