@@ -289,7 +289,7 @@ class SwinTransformerBlock(nn.Module):
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         # you can choose different FeedForward module
-        self.mlp = LeFF(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+        self.mlp = GDFF(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x):
         H, W = self.input_resolution
@@ -517,7 +517,7 @@ class TransformerBlock(nn.Module):
 
 
 class ColorTrans(nn.Module):
-    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=3, out_chans=3, patch_size=4, embed_dim=96, num_heads=[4, 4, 8, 16], mlp_ratio=4, window_size=7):
+    def __init__(self, img_size=224, depths=[2, 2, 2, 2], in_chans=3, out_chans=3, patch_size=4, embed_dim=96, num_heads=[2, 4, 8, 16], mlp_ratio=4, window_size=7):
         super(ColorTrans, self).__init__()
         self.img_size = img_size
         self.patch_size = patch_size
